@@ -33,15 +33,18 @@ fun read_file(filename:String) {
     var sum = 0
     var number = ""
     var isASymbolNeighbouring = false
+    var newAsterisks = mutableListOf<Pair<Int, Int>>()
     var collectingDigit = false
+    val asterisks = HashMap<Pair<Int, Int>, List<Int>>()
     for(i in 0..characterArray.size - 1) {
         for(j in 0..characterArray[i].size - 1) {
             if(characterArray[i][j].toChar().isDigit()) {
                 collectingDigit = true
                 number += characterArray[i][j].toChar()
-                if(checkIfASymbolIsNeighbouring(characterArray, i, j, symbolsList)) {
+                if(neighbouringSymbols(characterArray, i, j, symbolsList).isNotEmpty()) {
                     isASymbolNeighbouring = true
                     printInRed(characterArray[i][j].toChar())
+                    newAsterisks.addAll(neighbouringSymbols(characterArray, i, j, listOf('*')))
                 } else {
                     print(characterArray[i][j].toChar())
                 }
@@ -53,6 +56,10 @@ fun read_file(filename:String) {
                         sum += number.toInt()
                         isASymbolNeighbouring = false
                     }
+                    newAsterisks.distinct().forEach {
+                        asterisks[Pair(it.first, it.second)] = ((asterisks.get(Pair(it.first, it.second)) ?: listOf()) + listOf(number.toInt()))
+                    }
+                    newAsterisks = mutableListOf<Pair<Int, Int>>()
                     collectingDigit = false
                     number = ""
                 }
@@ -60,9 +67,9 @@ fun read_file(filename:String) {
         }
         println()
     }
-    println(partNumbers)
-    println(partNumbers.sum())
-    println(sum)
+    println("Part numbers: " + partNumbers.joinToString(", ",))
+    println("Part numbers sum: " + partNumbers.sum())
+    println("Gears sum: " + asterisks.values.stream().filter{it.size == 2}.map{it[0] * it[1]}.toList().sum())
 }
 
 fun printInRed(text:Char) {
@@ -73,36 +80,37 @@ fun printInRed(text:Char) {
     val reset = "\u001b[0m"
     print(red + text + reset)
 }
-fun checkIfASymbolIsNeighbouring(array:Array<IntArray>, posX:Int, posY:Int, symbolsList: List<Char>): Boolean {
+fun neighbouringSymbols(array:Array<IntArray>, posX:Int, posY:Int, symbolsList: List<Char>): List<Pair<Int, Int>> {
     val maxWidth = array[0].size
     val maxHeight = array.size
+    val symbols = mutableListOf<Pair<Int, Int>>()
     if(posX + 1 < maxWidth) {
         if (symbolsList.contains(array[posX+1][posY].toChar())) {
-            return true
+            symbols.add(Pair(posX+1, posY))
         }
         if (posY + 1 < maxHeight) {
-            if (symbolsList.contains(array[posX+1][posY+1].toChar())) return true
+            if (symbolsList.contains(array[posX+1][posY+1].toChar())) symbols.add(Pair(posX+1, posY+1))
         }
         if ((posY - 1 >= 0)) {
-            if (symbolsList.contains(array[posX+1][posY-1].toChar())) return true
+            if (symbolsList.contains(array[posX+1][posY-1].toChar())) symbols.add(Pair(posX+1, posY-1))
         }
     }
-    if(posX - 1 > 0) {
+    if(posX - 1 >= 0) {
         if (symbolsList.contains(array[posX-1][posY].toChar())) {
-            return true
+            symbols.add(Pair(posX-1, posY))
         }
         if (posY + 1 < maxHeight) {
-            if (symbolsList.contains(array[posX-1][posY+1].toChar())) return true
+            if (symbolsList.contains(array[posX-1][posY+1].toChar())) symbols.add(Pair(posX-1, posY+1))
         }
         if ((posY - 1 >= 0)) {
-            if (symbolsList.contains(array[posX-1][posY-1].toChar())) return true
+            if (symbolsList.contains(array[posX-1][posY-1].toChar())) symbols.add(Pair(posX-1, posY-1))
         }
     }
     if(posY + 1 < maxHeight && symbolsList.contains(array[posX][posY+1].toChar())) {
-        return true
+        symbols.add(Pair(posX, posY+1))
     }
     if(posY - 1 >= 0 && symbolsList.contains(array[posX][posY-1].toChar())) {
-        return true
+        symbols.add(Pair(posX, posY-1))
     }
-    return false
+    return symbols
 }
