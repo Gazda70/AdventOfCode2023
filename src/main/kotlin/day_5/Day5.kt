@@ -1,15 +1,17 @@
 package day_5
 
 import java.io.File
+import java.lang.Long.MAX_VALUE
 import java.nio.file.Paths
+import kotlin.system.measureTimeMillis
 
-val SOIL = "soil"
-val SEED = "seed"
-val FERTILIZER = "fertilizer"
-val WATER = "water"
-val LIGHT = "light"
-val TEMPERATURE = "temperature"
-val HUMIDITY = "humidity"
+const val SOIL = "soil"
+const val SEED = "seed"
+const val FERTILIZER = "fertilizer"
+const val LIGHT = "light"
+const val WATER = "water"
+const val TEMPERATURE = "temperature"
+const val HUMIDITY = "humidity"
 
 
 val DAY5_FILE_NAME = "day_5\\input.txt"
@@ -18,96 +20,69 @@ fun main() {
     readFile(path)
 }
 
-var seedToSoilMap = mutableListOf<Pair<Pair<Long, Long>, Pair<Long, Long>>>()
-var soilToFertilizerMap = mutableListOf<Pair<Pair<Long, Long>, Pair<Long, Long>>>()
-var fertilizerToWaterMap = mutableListOf<Pair<Pair<Long, Long>, Pair<Long, Long>>>()
-var waterToLightMap = mutableListOf<Pair<Pair<Long, Long>, Pair<Long, Long>>>()
-var lightToTemperatureMap = mutableListOf<Pair<Pair<Long, Long>, Pair<Long, Long>>>()
-var temperatureToHumidityMap = mutableListOf<Pair<Pair<Long, Long>, Pair<Long, Long>>>()
-var humidityToLocationMap = mutableListOf<Pair<Pair<Long, Long>, Pair<Long, Long>>>()
+lateinit var seedToSoilMap: List<Pair<Pair<Long, Long>, Pair<Long, Long>>>
+lateinit var soilToFertilizerMap: List<Pair<Pair<Long, Long>, Pair<Long, Long>>>
+lateinit var fertilizerToWaterMap: List<Pair<Pair<Long, Long>, Pair<Long, Long>>>
+lateinit var waterToLightMap: List<Pair<Pair<Long, Long>, Pair<Long, Long>>>
+lateinit var lightToTemperatureMap: List<Pair<Pair<Long, Long>, Pair<Long, Long>>>
+lateinit var temperatureToHumidityMap: List<Pair<Pair<Long, Long>, Pair<Long, Long>>>
+lateinit var humidityToLocationMap: List<Pair<Pair<Long, Long>, Pair<Long, Long>>>
 fun readFile(filename: String) {
     val lines = File(filename).bufferedReader().readLines()
     val seeds = lines[0].split(": ")[1].split(" ").map { it.toLong() }
-    var actualMap: MutableList<Pair<Pair<Long, Long>, Pair<Long, Long>>> = mutableListOf()
-    var actualCategory = ""
-    var collectingMap = false
-    for (i in 2..lines.size - 1) {
-        if (lines[i - 1] == "") {
-            actualCategory = lines[i].split(" ")[0].split("-")[0]
-            collectingMap = true
-        } else if (lines[i] == "") {
-            when {
-                actualCategory == SEED -> seedToSoilMap = actualMap
-                actualCategory == SOIL -> soilToFertilizerMap = actualMap
-                actualCategory == FERTILIZER -> fertilizerToWaterMap = actualMap
-                actualCategory == WATER -> waterToLightMap = actualMap
-                actualCategory == LIGHT -> lightToTemperatureMap = actualMap
-                actualCategory == TEMPERATURE -> temperatureToHumidityMap = actualMap
-                actualCategory == HUMIDITY -> humidityToLocationMap = actualMap
+    val maps = mutableMapOf<String, MutableList<Pair<Pair<Long, Long>, Pair<Long, Long>>>>()
+    var currentCategory = ""
+    lines.drop(2).forEach {line ->
+        when {
+            line.isBlank() -> currentCategory = ""
+            currentCategory.isEmpty() -> currentCategory = line.split(" ")[0].split("-")[0]
+            else -> {
+                val values = line.split(" ").map { it.toLong() }
+                maps.computeIfAbsent(currentCategory) { mutableListOf() }
+                    .add(Pair(Pair(values[1], values[1] + values[2]), Pair(values[0], values[0] + values[2])))
             }
-            actualCategory = ""
-            actualMap = mutableListOf()
-            collectingMap = false
-        } else if (collectingMap) {
-            val values = lines[i].split(" ").map { it.toLong() }
-            actualMap.add(Pair(Pair(values[1], values[1] + values[2]), Pair(values[0], values[0] + values[2])))
         }
     }
-    humidityToLocationMap = actualMap
-    val min = seeds.map { seed ->
-        try {
-            val pair = seedToSoilMap.first { element -> seed >= element.first.first && seed < element.first.second }
-            pair.second.first + seed - pair.first.first
-        } catch (exception: NoSuchElementException) {
-            seed
+    seedToSoilMap = maps[SEED] ?: mutableListOf()
+    soilToFertilizerMap = maps[SOIL] ?: mutableListOf()
+    fertilizerToWaterMap = maps[FERTILIZER] ?: mutableListOf()
+    waterToLightMap = maps[WATER] ?: mutableListOf()
+    lightToTemperatureMap = maps[LIGHT] ?: mutableListOf()
+    temperatureToHumidityMap = maps[TEMPERATURE] ?: mutableListOf()
+    humidityToLocationMap = maps[HUMIDITY] ?: mutableListOf()
+
+    var min = MAX_VALUE
+    for(i in seeds.indices step 2) {
+        val startSeed = seeds[i]
+        val endSeed = startSeed + seeds[i + 1]
+        val duration = measureTimeMillis {
+            for (j in startSeed..endSeed) {
+                val new = mapSeedsToMinLocation(j)
+                if (new < min) {
+                    min = new
+                }
+            }
         }
-    }.map { soil ->
-        try {
-            val pair =
-                soilToFertilizerMap.first { element -> soil >= element.first.first && soil < element.first.second }
-            pair.second.first + soil - pair.first.first
-        } catch (exception: NoSuchElementException) {
-            soil
-        }
-    }.map { fertilier ->
-        try {
-            val pair =
-                fertilizerToWaterMap.first { element -> fertilier >= element.first.first && fertilier < element.first.second }
-            pair.second.first + fertilier - pair.first.first
-        } catch (exception: NoSuchElementException) {
-            fertilier
-        }
-    }.map { water ->
-        try {
-            val pair = waterToLightMap.first { element -> water >= element.first.first && water < element.first.second }
-            pair.second.first + water - pair.first.first
-        } catch (exception: NoSuchElementException) {
-            water
-        }
-    }.map { light ->
-        try {
-            val pair =
-                lightToTemperatureMap.first { element -> light >= element.first.first && light < element.first.second }
-            pair.second.first + light - pair.first.first
-        } catch (exception: NoSuchElementException) {
-            light
-        }
-    }.map { temperature ->
-        try {
-            val pair =
-                temperatureToHumidityMap.first { element -> temperature >= element.first.first && temperature < element.first.second }
-            pair.second.first + temperature - pair.first.first
-        } catch (exception: NoSuchElementException) {
-            temperature
-        }
-    }.map { humidity ->
-        try {
-            val pair =
-                humidityToLocationMap.first { element -> humidity >= element.first.first && humidity < element.first.second }
-            pair.second.first + humidity - pair.first.first
-        } catch (exception: NoSuchElementException) {
-            humidity
-        }
-    }.min()
+        println("Mapping for seed range $startSeed-$endSeed took $duration")
+    }
     println(min)
+}
+
+fun mapSeedsToMinLocation(seed: Long): Long {
+    fun mapValue(value: Long, map: List<Pair<Pair<Long, Long>, Pair<Long, Long>>>): Long {
+        return map.firstOrNull { value in it.first.first..<it.first.second }
+            ?.let { it.second.first + value - it.first.first }
+            ?: value
+    }
+
+    var currentValue = seed
+    currentValue = mapValue(currentValue, seedToSoilMap)
+    currentValue = mapValue(currentValue, soilToFertilizerMap)
+    currentValue = mapValue(currentValue, fertilizerToWaterMap)
+    currentValue = mapValue(currentValue, waterToLightMap)
+    currentValue = mapValue(currentValue, lightToTemperatureMap)
+    currentValue = mapValue(currentValue, temperatureToHumidityMap)
+    currentValue = mapValue(currentValue, humidityToLocationMap)
+
+    return currentValue
 }
